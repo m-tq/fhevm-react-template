@@ -1,0 +1,45 @@
+{
+  "name": "zama-fhevm-nextjs-app",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A Next.js application demonstrating Zama FHEVM capabilities",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "generate-abi": "node scripts/generateAbi.js",
+    "deploy": "node scripts/deploy.js"
+  },
+  "dependencies": {
+    "@fhevm-sdk": "npm:fhevm-sdk-zama@^0.1.0",
+    "@fhevm/solidity": "^0.8.0",
+    "@zama-fhe/relayer-sdk": "^0.1.0",
+    "next": "14.0.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "ethers": "^6.8.0",
+    "@radix-ui/react-slot": "^1.0.2",
+    "@radix-ui/react-switch": "^1.0.3",
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.0.0",
+    "tailwind-merge": "^2.0.0",
+    "tailwindcss-animate": "^1.0.7",
+    "lucide-react": "^0.294.0",
+    "next-themes": "^0.2.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.8.0",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "typescript": "^5.2.0",
+    "eslint": "^8.51.0",
+    "eslint-config-next": "14.0.0",
+    "tailwindcss": "^3.3.5",
+    "autoprefixer": "^10.4.16",
+    "postcss": "^8.4.31"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

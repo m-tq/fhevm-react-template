@@ -29,59 +29,103 @@ export class RelayerSDKLoader {
 
     if ("relayerSDK" in window) {
       if (!isFhevmRelayerSDKType(window.relayerSDK, this._trace)) {
-        console.log("[RelayerSDKLoader] window.relayerSDK === undefined");
-        throw new Error("RelayerSDKLoader: Unable to load FHEVM Relayer SDK");
+        console.log("[RelayerSDKLoader] window.relayerSDK is invalid, clearing and reloading...");
+        // Clear invalid relayerSDK and try to reload
+        delete (window as any).relayerSDK;
+      } else {
+        return Promise.resolve();
       }
-      return Promise.resolve();
     }
 
+    return this.loadWithRetry(3);
+  }
+
+  private loadWithRetry(maxRetries: number): Promise<void> {
     return new Promise((resolve, reject) => {
-      const existingScript = document.querySelector(
-        `script[src="${SDK_CDN_URL}"]`
-      );
-      if (existingScript) {
-        if (!isFhevmWindowType(window, this._trace)) {
-          reject(
-            new Error(
-              "RelayerSDKLoader: window object does not contain a valid relayerSDK object."
-            )
-          );
-        }
-        resolve();
-        return;
-      }
+      let retryCount = 0;
 
-      const script = document.createElement("script");
-      script.src = SDK_CDN_URL;
-      script.type = "text/javascript";
-      script.async = true;
-
-      script.onload = () => {
-        if (!isFhevmWindowType(window, this._trace)) {
-          console.log("[RelayerSDKLoader] script onload FAILED...");
-          reject(
-            new Error(
-              `RelayerSDKLoader: Relayer SDK script has been successfully loaded from ${SDK_CDN_URL}, however, the window.relayerSDK object is invalid.`
-            )
-          );
-        }
-        resolve();
-      };
-
-      script.onerror = () => {
-        console.log("[RelayerSDKLoader] script onerror... ");
-        reject(
-          new Error(
-            `RelayerSDKLoader: Failed to load Relayer SDK from ${SDK_CDN_URL}`
-          )
+      const attemptLoad = () => {
+        console.log(`[RelayerSDKLoader] Attempt ${retryCount + 1}/${maxRetries}`);
+        
+        const existingScript = document.querySelector(
+          `script[src="${SDK_CDN_URL}"]`
         );
+        if (existingScript) {
+          existingScript.remove();
+          console.log("[RelayerSDKLoader] Removed existing script");
+        }
+
+        const script = document.createElement("script");
+        script.src = SDK_CDN_URL;
+        script.type = "text/javascript";
+        script.async = true;
+
+        // Add timeout for script loading
+        const timeout = setTimeout(() => {
+          console.log("[RelayerSDKLoader] Script loading timeout");
+          script.remove();
+          if (retryCount < maxRetries - 1) {
+            retryCount++;
+            setTimeout(attemptLoad, 1000); // Wait 1 second before retry
+          } else {
+            reject(
+              new Error(
+                `RelayerSDKLoader: Failed to load Relayer SDK from ${SDK_CDN_URL} after ${maxRetries} attempts (timeout)`
+              )
+            );
+          }
+        }, 10000); // 10 second timeout
+
+        script.onload = () => {
+          clearTimeout(timeout);
+          console.log("[RelayerSDKLoader] Script loaded successfully");
+          
+          // Wait a bit for the SDK to initialize
+          setTimeout(() => {
+            if (!isFhevmWindowType(window, this._trace)) {
+              console.log("[RelayerSDKLoader] window.relayerSDK not available after script load");
+              if (retryCount < maxRetries - 1) {
+                retryCount++;
+                setTimeout(attemptLoad, 1000);
+              } else {
+                reject(
+                  new Error(
+                    `RelayerSDKLoader: Relayer SDK script loaded from ${SDK_CDN_URL}, but window.relayerSDK is invalid after ${maxRetries} attempts`
+                  )
+                );
+              }
+            } else {
+              console.log("[RelayerSDKLoader] SDK loaded and validated successfully");
+              resolve();
+            }
+          }, 500); // Wait 500ms for SDK initialization
+        };
+
+        script.onerror = () => {
+          clearTimeout(timeout);
+          console.log(`[RelayerSDKLoader] Script loading error on attempt ${retryCount + 1}`);
+          if (retryCount < maxRetries - 1) {
+            retryCount++;
+            setTimeout(attemptLoad, 1000);
+          } else {
+            reject(
+              new Error(
+                `RelayerSDKLoader: Failed to load Relayer SDK from ${SDK_CDN_URL} after ${maxRetries} attempts`
+              )
+            );
+          }
+        };
+
+        console.log("[RelayerSDKLoader] Adding script to DOM...");
+        document.head.appendChild(script);
+        console.log("[RelayerSDKLoader] Script added!");
       };
 
-      console.log("[RelayerSDKLoader] add script to DOM...");
-      document.head.appendChild(script);
-      console.log("[RelayerSDKLoader] script added!")
+      attemptLoad();
     });
   }
+
+
 }
 
 function isFhevmRelayerSDKType(
